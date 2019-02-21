@@ -21,7 +21,6 @@ import android.support.annotation.NonNull;
 import android.text.TextPaint;
 import android.util.AttributeSet;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewParent;
@@ -74,6 +73,8 @@ public class IndicatorSeekBar extends View {
     private boolean mSeekSmoothly;//seek continuously
     private float[] mProgressArr;//save the progress which at tickMark position.
     private boolean mR2L;//right to left,compat local problem.
+    private int mSpaceHeightAboveOfTickTexts; // between tickTexts and track
+    private boolean mTickTextsCenterAll;
     //tick texts
     private boolean mShowTickText;//the palace where the tick text show .
     private boolean mShowBothTickTextsOnly;//show the tick texts on the both ends of seek bar before.
@@ -187,6 +188,8 @@ public class IndicatorSeekBar extends View {
         mOnlyThumbDraggable = ta.getBoolean(R.styleable.IndicatorSeekBar_isb_only_thumb_draggable, builder.onlyThumbDraggable);
         mSeekSmoothly = ta.getBoolean(R.styleable.IndicatorSeekBar_isb_seek_smoothly, builder.seekSmoothly);
         mR2L = ta.getBoolean(R.styleable.IndicatorSeekBar_isb_r2l, builder.r2l);
+        mSpaceHeightAboveOfTickTexts = ta.getDimensionPixelSize(R.styleable.IndicatorSeekBar_isb_space_height_above_of_tick_texts, SizeUtils.dp2px(context, 8));
+        mTickTextsCenterAll = ta.getBoolean(R.styleable.IndicatorSeekBar_isb_tick_texts_center_all, true);
         //track
         mBackgroundTrackSize = ta.getDimensionPixelSize(R.styleable.IndicatorSeekBar_isb_track_background_size, builder.trackBackgroundSize);
         mProgressTrackSize = ta.getDimensionPixelSize(R.styleable.IndicatorSeekBar_isb_track_progress_size, builder.trackProgressSize);
@@ -316,7 +319,7 @@ public class IndicatorSeekBar extends View {
             initTextPaint();
             mTextPaint.setTypeface(mTextsTypeface);
             mTextPaint.getTextBounds("j", 0, 1, mRect);
-            mTickTextsHeight = mRect.height() + SizeUtils.dp2px(mContext, 3);//with the gap(3dp) between tickTexts and track.
+            mTickTextsHeight = mRect.height() + mSpaceHeightAboveOfTickTexts;//with the gap(3dp) between tickTexts and track.
         }
     }
 
@@ -364,7 +367,7 @@ public class IndicatorSeekBar extends View {
         //init TickTexts Y Location
         if (needDrawText()) {
             mTextPaint.getTextBounds("j", 0, 1, mRect);
-            mTickTextY = mPaddingTop + mCustomDrawableMaxHeight + Math.round(mRect.height() - mTextPaint.descent()) + SizeUtils.dp2px(mContext, 3);
+            mTickTextY = mPaddingTop + mCustomDrawableMaxHeight + Math.round(mRect.height() - mTextPaint.descent()) + mSpaceHeightAboveOfTickTexts;
             mThumbTextY = mTickTextY;
         }
         //init tick's X and text's X location;
@@ -577,13 +580,24 @@ public class IndicatorSeekBar extends View {
             if (mR2L) {
                 index = mTickTextsArr.length - i - 1;
             }
-            if (i == 0) {
-                canvas.drawText(mTickTextsArr[index], mTextCenterX[i] + mTickTextsWidth[index] / 2.0f, mTickTextY, mTextPaint);
-            } else if (i == mTickTextsArr.length - 1) {
-                canvas.drawText(mTickTextsArr[index], mTextCenterX[i] - mTickTextsWidth[index] / 2.0f, mTickTextY, mTextPaint);
-            } else {
+
+            if (mTickTextsCenterAll)
                 canvas.drawText(mTickTextsArr[index], mTextCenterX[i], mTickTextY, mTextPaint);
+            else {
+
+                int tickMarksBitmapWidth = 0;
+                if (mSelectTickMarksBitmap != null)
+                    tickMarksBitmapWidth = mSelectTickMarksBitmap.getWidth();
+
+                if (i == 0) {
+                    canvas.drawText(mTickTextsArr[index], mTextCenterX[i] + mTickTextsWidth[index] / 2.0f - tickMarksBitmapWidth / 2.0f, mTickTextY, mTextPaint);
+                } else if (i == mTickTextsArr.length - 1) {
+                    canvas.drawText(mTickTextsArr[index], mTextCenterX[i] - mTickTextsWidth[index] / 2.0f + tickMarksBitmapWidth / 2.0f, mTickTextY, mTextPaint);
+                } else {
+                    canvas.drawText(mTickTextsArr[index], mTextCenterX[i], mTickTextY, mTextPaint);
+                }
             }
+
         }
     }
 
@@ -1930,6 +1944,14 @@ public class IndicatorSeekBar extends View {
         this.mTextsTypeface = typeface;
         measureTickTextsBonds();
         requestLayout();
+        invalidate();
+    }
+
+    /**
+     * set the color for progress track.
+     */
+    public void setProgressTrackColor(int progressTrackColor) {
+        this.mProgressTrackColor = progressTrackColor;
         invalidate();
     }
 
